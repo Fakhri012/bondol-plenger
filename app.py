@@ -9,7 +9,6 @@ from reportlab.lib import colors
 from docx import Document
 import os
 import re
-from pypdf import PdfReader, PdfWriter
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 app = Flask(
@@ -19,20 +18,6 @@ app = Flask(
     static_url_path="/static",
 )
 app.config["SECRET_KEY"] = "change-me"
-
-
-ATTACHMENT_FOLDER = "template_pdfs"
-
-MERGE_FILES = [
-    "2.CV.pdf",
-    "3.Ijazah_Transkrip.pdf",
-    "4.KTP.pdf",
-  
-]
-
-os.makedirs(ATTACHMENT_FOLDER, exist_ok=True)
-
-
 
 LETTER_HEADER_TEMPLATE = "Jakarta, {tanggal}"
 LETTER_LIST_ITEMS = [
@@ -123,34 +108,10 @@ def sanitize_filename(value: str) -> str:
     value = re.sub(r"[^A-Za-z0-9_-]+", "_", value.strip())
     return value or "surat"
 
-COUNTER_FILE = "counter.txt"
-
-def get_counter():
-    if not os.path.exists(COUNTER_FILE):
-        with open(COUNTER_FILE, "w") as f:
-            f.write("0")
-
-    with open(COUNTER_FILE, "r") as f:
-        return int(f.read())
-
-
-
-def increment_counter():
-    count = get_counter() + 1
-
-    with open(COUNTER_FILE, "w") as f:
-        f.write(str(count))
-
-    return count
 
 @app.route("/", methods=["GET"])
 def index():
-    return render_template(
-        "index.html",
-        errors=None,
-        form=None,
-        total_generate=get_counter()
-    )
+    return render_template("index.html", errors=None, form=None)
 
 
 @app.route("/generate", methods=["POST"])
@@ -177,15 +138,8 @@ def generate_pdf():
             "job_posisi": job_posisi,
             "tanggal": tanggal,
         }
+        return render_template("index.html", errors=errors, form=form)
 
-        return render_template(
-            "index.html",
-            errors=errors,
-            form=form,
-            total_generate=get_counter()
-        )
-
-    buffer = BytesIO()
     buffer = BytesIO()
     doc = SimpleDocTemplate(
         buffer,
@@ -379,7 +333,7 @@ def generate_pdf():
         )
         story.append(Spacer(1, 0.5 * cm))
         story.append(Paragraph("Hormat saya,", signature_style))
-        image_path = os.path.join(os.path.dirname(__file__), "ttd_fatma-removebg-preview.png")
+        image_path = os.path.join(os.path.dirname(__file__), "ttd-bondol.png")
         if os.path.exists(image_path):
             signature_image = Image(image_path, width=3 * cm, height=1.2 * cm)
             signature_image.hAlign = "RIGHT"
@@ -390,43 +344,17 @@ def generate_pdf():
     doc.build(story)
     buffer.seek(0)
 
-    # Merge PDF
-    writer = PdfWriter()
-
-    # Surat Lamaran hasil generate
-    writer.append(PdfReader(buffer))
-
-    # PDF tambahan dari folder template_pdfs
-    for pdf_file in MERGE_FILES:
-
-        pdf_path = os.path.join(
-            ATTACHMENT_FOLDER,
-            pdf_file
-        )
-
-        if os.path.exists(pdf_path):
-            writer.append(pdf_path)
-        else:
-            print(f"File tidak ditemukan: {pdf_path}")
-
-    merged_buffer = BytesIO()
-
-    writer.write(merged_buffer)
-    merged_buffer.seek(0)
-
-    increment_counter()
-
     safe_company = sanitize_filename(nama_perusahaan)
     safe_position = sanitize_filename(job_posisi)
-
     filename = f"Lamaran_{safe_company}_{safe_position}.pdf"
 
     return send_file(
-        merged_buffer,
+        buffer,
         as_attachment=True,
         download_name=filename,
         mimetype="application/pdf",
     )
+
 
 if __name__ == "__main__":
     app.run(debug=True)
