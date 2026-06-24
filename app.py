@@ -356,5 +356,4 @@ def generate_pdf():
     )
 
 
-if __name__ == "__main__":
-    app.run(debug=True)
+
