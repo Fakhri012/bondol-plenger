@@ -9,6 +9,7 @@ from reportlab.lib import colors
 from docx import Document
 import os
 import re
+from pypdf import PdfReader, PdfWriter
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 app = Flask(
@@ -19,7 +20,21 @@ app = Flask(
 )
 app.config["SECRET_KEY"] = "change-me"
 
-LETTER_HEADER_TEMPLATE = "Metro, {tanggal}"
+
+ATTACHMENT_FOLDER = "template_pdfs"
+
+MERGE_FILES = [
+    "2.CV.pdf",
+    "3.Ijazah_Transkrip.pdf",
+    "4.KTP.pdf",
+  
+]
+
+os.makedirs(ATTACHMENT_FOLDER, exist_ok=True)
+
+
+
+LETTER_HEADER_TEMPLATE = "Jakarta, {tanggal}"
 LETTER_LIST_ITEMS = [
     "Surat Lamaran Kerja",
     "Daftar Riwayat Hidup (CV)",
@@ -58,7 +73,7 @@ def build_story_from_word_text(
     paragraphs = [p.strip() for p in letter_text.split("\n\n") if p.strip()]
 
     for index, paragraph in enumerate(paragraphs):
-        if index == 0 and paragraph.lower().startswith("metro,"):
+        if index == 0 and paragraph.lower().startswith("Jakarta,"):
             story.append(Paragraph(paragraph, header_style))
             continue
 
@@ -108,10 +123,34 @@ def sanitize_filename(value: str) -> str:
     value = re.sub(r"[^A-Za-z0-9_-]+", "_", value.strip())
     return value or "surat"
 
+COUNTER_FILE = "counter.txt"
+
+def get_counter():
+    if not os.path.exists(COUNTER_FILE):
+        with open(COUNTER_FILE, "w") as f:
+            f.write("0")
+
+    with open(COUNTER_FILE, "r") as f:
+        return int(f.read())
+
+
+
+def increment_counter():
+    count = get_counter() + 1
+
+    with open(COUNTER_FILE, "w") as f:
+        f.write(str(count))
+
+    return count
 
 @app.route("/", methods=["GET"])
 def index():
-    return render_template("index.html", errors=None, form=None)
+    return render_template(
+        "index.html",
+        errors=None,
+        form=None,
+        total_generate=get_counter()
+    )
 
 
 @app.route("/generate", methods=["POST"])
@@ -138,8 +177,15 @@ def generate_pdf():
             "job_posisi": job_posisi,
             "tanggal": tanggal,
         }
-        return render_template("index.html", errors=errors, form=form)
 
+        return render_template(
+            "index.html",
+            errors=errors,
+            form=form,
+            total_generate=get_counter()
+        )
+
+    buffer = BytesIO()
     buffer = BytesIO()
     doc = SimpleDocTemplate(
         buffer,
@@ -269,12 +315,12 @@ def generate_pdf():
         )
         story.append(Paragraph("Yang bertandatangan di bawah ini:", body_style))
         detail_data = [
-            [Paragraph("Nama", label_style), Paragraph(":", label_style), Paragraph("Denissa Putri Balqis, S.A.P", value_style)],
-            [Paragraph("Tempat & Tanggal Lahir", label_style), Paragraph(":", label_style), Paragraph("Metro, Lampung, 04 Januari 1999", value_style)],
-            [Paragraph("Pendidikan Terakhir", label_style), Paragraph(":", label_style), Paragraph("S1 Administrasi Publik STISIPOL Dharma Wacana Metro", value_style)],
-            [Paragraph("Alamat", label_style), Paragraph(":", label_style), Paragraph("Jl. Alamsyah RPN Gg. Merdeka RT/RW:24/10, 15 Kauman Bawah Kel. Metro Kec. Metro Pusat, Kota Metro – Lampung", value_style)],
-            [Paragraph("Nomor Handphone", label_style), Paragraph(":", label_style), Paragraph("0899-7604-722", value_style)],
-            [Paragraph("Email", label_style), Paragraph(":", label_style), Paragraph("denissablqs@gmail.com", value_style)],
+            [Paragraph("Nama", label_style), Paragraph(":", label_style), Paragraph("Fatma Zahratun Nisa", value_style)],
+            [Paragraph("Tempat & Tanggal Lahir", label_style), Paragraph(":", label_style), Paragraph("Jakarta, 4 Februari, 2007", value_style)],
+            [Paragraph("Pendidikan Terakhir", label_style), Paragraph(":", label_style), Paragraph("SMKN 19 Jakarta Jurusan Akutansi", value_style)],
+            [Paragraph("Alamat", label_style), Paragraph(":", label_style), Paragraph("Pedurenan Mesjid Rt/Rw 010/007 Karet Kuningan, Setiabudi", value_style)],
+            [Paragraph("Nomor Handphone", label_style), Paragraph(":", label_style), Paragraph("0857-7483-1517", value_style)],
+            [Paragraph("Email", label_style), Paragraph(":", label_style), Paragraph("fatmanissa5@gmail.com", value_style)],
             [Paragraph("Status", label_style), Paragraph(":", label_style), Paragraph("Belum Menikah", value_style)],
         ]
         detail_table = Table(
@@ -333,28 +379,54 @@ def generate_pdf():
         )
         story.append(Spacer(1, 0.5 * cm))
         story.append(Paragraph("Hormat saya,", signature_style))
-        image_path = os.path.join(os.path.dirname(__file__), "ttd_caca-removebg-preview.png")
+        image_path = os.path.join(os.path.dirname(__file__), "ttd_fatma-removebg-preview.png")
         if os.path.exists(image_path):
             signature_image = Image(image_path, width=3 * cm, height=1.2 * cm)
             signature_image.hAlign = "RIGHT"
             story.append(signature_image)
             story.append(Spacer(1, 0.4 * cm))
-        story.append(Paragraph("Denissa Putri Balqis, S.A.P", signature_style))
+        story.append(Paragraph("Fatma Zahratun Nisa", signature_style))
 
     doc.build(story)
     buffer.seek(0)
 
+    # Merge PDF
+    writer = PdfWriter()
+
+    # Surat Lamaran hasil generate
+    writer.append(PdfReader(buffer))
+
+    # PDF tambahan dari folder template_pdfs
+    for pdf_file in MERGE_FILES:
+
+        pdf_path = os.path.join(
+            ATTACHMENT_FOLDER,
+            pdf_file
+        )
+
+        if os.path.exists(pdf_path):
+            writer.append(pdf_path)
+        else:
+            print(f"File tidak ditemukan: {pdf_path}")
+
+    merged_buffer = BytesIO()
+
+    writer.write(merged_buffer)
+    merged_buffer.seek(0)
+
+    increment_counter()
+
     safe_company = sanitize_filename(nama_perusahaan)
     safe_position = sanitize_filename(job_posisi)
+
     filename = f"Lamaran_{safe_company}_{safe_position}.pdf"
 
     return send_file(
-        buffer,
+        merged_buffer,
         as_attachment=True,
         download_name=filename,
         mimetype="application/pdf",
     )
-
 
 if __name__ == "__main__":
     app.run(debug=True)

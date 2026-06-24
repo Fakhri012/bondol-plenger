@@ -17,10 +17,10 @@
                 <div class="card-body p-5">
                   <div class="d-flex align-items-start justify-content-between flex-column flex-md-row mb-4 gap-3">
                     <div>
-                      <h2 class="h3 mb-1">Surat Lamaran Kerja untuk Caca</h2>
+                      <h2 class="h3 mb-1">Surat Lamaran Kerja untuk si Bondol</h2>
                       <p class="text-muted mb-0">Langsung buat file PDF dengan tampilan surat profesional dan siap pakai.</p>
                     </div>
-                    <div class="badge rounded-pill bg-primary text-white px-3 py-2">1 Menit Selesai</div>
+                    <div class="badge rounded-pill bg-primary text-white px-3 py-2">PDF Generate {{ total_generate }}x</div>
                   </div>
 
                   {% if errors %}
@@ -40,7 +40,7 @@
                     </div>
                     <div class="mb-4">
                       <label for="lokasi_perusahaan" class="form-label">Lokasi Perusahaan</label>
-                      <input type="text" class="form-control" id="lokasi_perusahaan" name="lokasi_perusahaan" placeholder="Contoh: Metro, Lampung" required value="{{ form.lokasi_perusahaan if form else '' }}">
+                      <input type="text" class="form-control" id="lokasi_perusahaan" name="lokasi_perusahaan" placeholder="Contoh: Jakarta" required value="{{ form.lokasi_perusahaan if form else '' }}">
                     </div>
                     <div class="mb-4">
                       <label for="job_posisi" class="form-label">Posisi yang Dilamar</label>
@@ -56,7 +56,7 @@
                   </form>
                 </div>
               </div>
-              <p class="text-center text-muted mt-4 mb-0">Aplikasi buat caca biar ga pusing lagi ngetik ngetik.</p>
+              <p class="text-center text-muted mt-4 mb-0">Aplikasi buat si bondol plenger untuk mempermudahan nyari kerja.</p>
             </div>
           </div>
         </div>
