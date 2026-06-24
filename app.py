@@ -133,19 +133,7 @@ def increment_counter():
 
 @app.route("/", methods=["GET"])
 def index():
-    if not os.path.exists(COUNTER_FILE):
-        counter = 0
-    else:
-        with open(COUNTER_FILE, "r") as f:
-            content = f.read().strip()
-            counter = content if content else 0
-
-    return render_template(
-        "index.html",
-        errors=None,
-        form=None,
-        total_generate=counter
-    )
+    return render_template("index.html", errors=None, form=None)
 
 
 @app.route("/generate", methods=["POST"])
