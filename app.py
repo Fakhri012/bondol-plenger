@@ -11,6 +11,9 @@ import os
 import re
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+COUNTER_FILE = os.path.join(BASE_DIR, "counter.txt")
+
 app = Flask(
     __name__,
     template_folder=os.path.join(BASE_DIR, "templates"),
@@ -108,10 +111,35 @@ def sanitize_filename(value: str) -> str:
     value = re.sub(r"[^A-Za-z0-9_-]+", "_", value.strip())
     return value or "surat"
 
+def increment_counter():
+    # kalau file belum ada, buat otomatis
+    if not os.path.exists(COUNTER_FILE):
+        with open(COUNTER_FILE, "w") as f:
+            f.write("0")
+
+    try:
+        with open(COUNTER_FILE, "r") as f:
+            content = f.read().strip()
+            count = int(content) if content else 0
+    except:
+        count = 0
+
+    count += 1
+
+    with open(COUNTER_FILE, "w") as f:
+        f.write(str(count))
+
+    return count
 
 @app.route("/", methods=["GET"])
 def index():
-    return render_template("index.html", errors=None, form=None)
+    if not os.path.exists(COUNTER_FILE):
+        counter = 0
+    else:
+        with open(COUNTER_FILE, "r") as f:
+            counter = f.read().strip()
+
+    return render_template("index.html", errors=None, form=None, total_generate=counter)
 
 
 @app.route("/generate", methods=["POST"])
@@ -343,6 +371,8 @@ def generate_pdf():
 
     doc.build(story)
     buffer.seek(0)
+    total_generate = increment_counter()
+    print("Total generate:", total_generate)
 
     safe_company = sanitize_filename(nama_perusahaan)
     safe_position = sanitize_filename(job_posisi)
