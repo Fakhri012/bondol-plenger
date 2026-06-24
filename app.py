@@ -137,9 +137,15 @@ def index():
         counter = 0
     else:
         with open(COUNTER_FILE, "r") as f:
-            counter = f.read().strip()
+            content = f.read().strip()
+            counter = content if content else 0
 
-    return render_template("index.html", errors=None, form=None, total_generate=counter)
+    return render_template(
+        "index.html",
+        errors=None,
+        form=None,
+        total_generate=counter
+    )
 
 
 @app.route("/generate", methods=["POST"])
